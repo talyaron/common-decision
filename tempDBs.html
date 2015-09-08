@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test FB</title>
+        <script src="firebase.js"></script>
+    </head>
+    <body>
+        <script>
+            console.log("1)");
+            var DB = new Firebase("https://testingtalyaron.firebaseio.com/");
+            console.log("2)");
+            
+            //DB.update({test: "test"});
+            
+            DB.child("testUpdate/user").on("value", function(userDetails){
+                userDetails.forEach(function(ditail){
+                    console.log("dtl: "+ditail.val());
+                })
+            })
+            
+            var test2DB = DB.child("Test2");
+            test2DB.on("value",function(tests){
+                console.log("boo: "+tests.key());
+                
+                tests.forEach(function(testss){
+                    console.log("{"+testss.key()+","+testss.val()+"}");
+                });
+                
+            })
+            
+            DB.child("testUpdate").update({user:{user_private_name:"TalZ", userFamelyName:"Yaron"}, user2:"Zvi"});
+            
+            
+            
+            
+            
+        </script>
+    </body>
+    
+</html>

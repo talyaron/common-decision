@@ -1,0 +1,334 @@
+// start listen to DB counting of voters
+
+
+// --------------- Functions ------------------------
+
+// set the type of questions in the form (for the buttons)
+
+function setTypeOfQuestion(type){
+                  
+    switch(type){
+      case "reg":
+          
+          $("#regQuestion").css({"background-color": "green", "box-shadow": "1px 1px 3px gray"});
+          $("#yesnoQuestion").css({"background-color":"aquamarine", "box-shadow": "3px 3px 3px gray"});
+          $("#wisQuestion").css({"background-color":"aquamarine", "box-shadow": "3px 3px 3px gray"});
+          break;
+      case "yesno":
+          
+          $("#regQuestion").css({"background-color":"aquamarine", "box-shadow": "3px 3px 3px gray"});
+          $("#yesnoQuestion").css({"background-color": "green", "box-shadow": "1px 1px 3px gray"});
+          $("#wisQuestion").css({"background-color":"aquamarine", "box-shadow": "3px 3px 3px gray"});
+          break;
+      case "wiz":
+          
+          $("#regQuestion").css({"background-color":"aquamarine", "box-shadow": "3px 3px 3px gray"});
+          $("#yesnoQuestion").css({"background-color":"aquamarine", "box-shadow": "3px 3px 3px gray"});
+          $("#wisQuestion").css({"background-color": "green", "box-shadow": "1px 1px 3px gray"});
+          break;
+      default:
+          
+          $("#regQuestion").css({"background-color":"nul"});
+          $("#yesnoQuestion").css({"background-color":"null"});
+          $("#wisQuestion").css({"background-color":"null"});
+    }
+}
+
+
+function wizShowOptions(questionKey){
+    
+        
+    var questionKeyStr = JSON.stringify(questionKey);
+    
+    // all options for the question are getting renewed titles and texts from DB
+    
+    sessionDB.child("questions/"+questionKey+"/options").once("value", function(optionsDB){
+                
+        //for each option:
+        var optionsHtml = new Array();
+
+        optionsDB.forEach(function(optionDB){
+            
+            var optionKey = optionDB.key();
+            
+            
+            //listen to changes in texts
+            
+            sessionDB.child("questions/"+questionKey+"/options/"+optionKey+"/text").once("value", function(textData){
+            			
+            			//change the texts in the options to that of the DB
+                $("#"+questionKey+optionKey).text(textData.val().mainText);
+                $("#"+questionKey+optionKey+"T").text(textData.val().title);
+            })
+            
+            // ------------------
+            
+            var yesVotes = 0;
+            var noVotes = 0;
+
+            
+            //DB for no voters
+            var votesNoDB = sessionDB.child("questions/"+questionKey+"/options/"+optionKey+"/votes/no");
+            //DB for yes voters
+            var votesYesDB = sessionDB.child("questions/"+questionKey+"/options/"+optionKey+"/votes/yes");
+
+            // get text and title of option 
+            var textOption = optionDB.val().text.mainText;
+            var titleOption = optionDB.val().text.title;
+            var color = optionDB.val().text.color;
+
+            //count no voters
+
+            votesNoDB.once("value",function(voters){
+                voters.forEach(function(vote){
+                    
+                    noVotes++;
+                })
+
+            });
+
+            //count yes voters for option
+
+            votesYesDB.once("value",function(voters){
+                voters.forEach(function(vote){
+                    
+                    yesVotes++;
+                })
+            })
+
+            
+            var optionKeyStr = JSON.stringify(optionKey);
+            
+            var yesStr = JSON.stringify("yes");
+            var noStr = JSON.stringify("no")
+            if (color === undefined) {
+                var colorStr = "brown";
+            } else {
+                var colorStr = color;
+            }
+            
+            var titleOptionStr = JSON.stringify(titleOption);
+            
+            var optionHtmlCurrent = 
+                      "<div class='wizLayout' >"+
+                            "<div class='wizLeftPanel'>"+
+                                "<div class='wizVoteUp wizButtons clickables' onclick='setWizVote("+questionKeyStr+","+optionKeyStr+","+yesStr+")'><img src='img/Yes.png' width='30px'>"+
+                                "</div>"+
+                                "<div class='wizVoteDown wizButtons clickables' onclick='setWizVote("+questionKeyStr+","+optionKeyStr+","+noStr+")'><img src='img/no.png' height='30px'>"+
+                                "</div>"+
+                                "<div class='wizSuggest wizButtons clickables' onclick='setSuggestion()'><img src='img/suggestion.png' height='30px'>"+
+                                "</div>"+
+                                "<div class='wizTalk wizButtons clickables' onclick='startWizTalk("+questionKeyStr+","+optionKeyStr+", "+titleOptionStr+")'><img src='img/talk.png' height='30px'>"+
+                                "</div>"+
+                            "</div>"+
+                            "<div class='wizMainWrapText' style='background-color:"+colorStr+"'>"+
+                                "<div dir='rtl' class='wizMainText'>"+
+                                    "<div class='wizMainTextTitle' contenteditable='false' id='"+questionKey+optionKey+"T'>"+
+                                        titleOption+
+                                    "</div>"+
+                                    "<div class='wizMainTextText' contenteditable='false' id='"+questionKey+optionKey+"'>"+
+                                        textOption+
+                                    "</div>"+
+                                "</div>"+
+                                " <input type='button' class='pure-button pure-button-primary' value='עריכה' onclick='editWizOption("+questionKeyStr+","+optionKeyStr+")'> "+                                 
+                                " <span style='color: white'>בעד:"+yesVotes+", נגד: "+noVotes+"</span>"+
+                            "</div></div>";
+            
+            optionsHtml.push([(yesVotes - noVotes),optionHtmlCurrent]);
+            
+            var score = (noVotes-yesVotes)
+            
+            
+        })
+        for (i in optionsHtml){
+            
+            console.log("BeforeSort: "+optionsHtml[i][0]);    
+        }
+        optionsHtml.sort();
+        
+        for (i in optionsHtml){
+            
+            console.log("AfterSort: "+optionsHtml[i][0]);    
+        }
+        
+        optionsHtml.reverse();
+        
+        var headerText = '';
+        
+        sessionDB.child("questions/"+questionKey+"/header").once("value", function(headerData){
+            headerText = headerData.val();
+        })
+        
+        questionsList = JSON.stringify("questionsList");
+        
+        var htmlwizQuestion = "<img src='img/plus.png' id='wizPlus' class='clickables' onclick='crearteNewOptionTexbox("+questionKeyStr+")'>"+
+                    "<img src='img/update.png' id='wizUpdate' class='clickables' onclick='wizShowOptions("+questionKeyStr+")'>"+
+                    "<img src='img/close.png' width='35px' class='clickables' onclick='hideAllEcept("+questionsList+")' id='okWizQuestion'>"+
+                    "<div class='wizHeader'>שאלה: "+headerText+"</div><div id='editWizQuestion'></div>";
+        
+        for (i in optionsHtml){
+            
+            htmlwizQuestion += optionsHtml[i][1];
+            
+        }
+                    
+        hideAllEcept("wizQuestion");
+        $("#wizQuestion").show();
+        $("#wizQuestion").html(htmlwizQuestion);
+        $("#editWizQuestion").hide();
+                    
+    })
+}
+                                    
+      
+function setWizVote(questionKey,optionKey,yesOrNot){
+		
+		//Set new vote to an option    
+    var votingDB = sessionDB.child("questions/"+questionKey+"/options/"+optionKey+"/votes/");
+    
+    //delete existing entry
+    votingDB.child("yes/"+userName).remove();
+    votingDB.child("no/"+userName).remove();
+    
+    //set new vote
+    votingDB.child(yesOrNot+"/"+userName).set(userName);
+    
+    //wizShowOptions(questionKey);
+    
+}
+
+function updateText(questionKey, optionKey){
+			//update text in option
+    
+    var textID = questionKey+optionKey;
+        
+    var textInput = $("#"+textID+"Edit").html();
+    textInput = textInput.replace(/(?:\r\n|\r|\n)/g, '<br />');
+    var titleInput = $("#"+textID+"TEdit").html();
+        
+    sessionDB.child("questions/"+questionKey+"/options/"+optionKey+"/text/").update({mainText: textInput, title: titleInput});
+    
+    wizShowOptions(questionKey);
+    $("#editWizQuestion").hide(500);
+    
+    
+}
+
+function crearteNewOptionTexbox (questionKey) {
+    
+    var questionKeyStr = JSON.stringify(questionKey);
+    //var title = JSON.stringify("title");
+    //var text = JSON.stringify("text");
+    
+    var htmlText = "<div id='newOptionBoard'>אנא הציעו הצעה חדשה:<form class='pure-form'><input name='title' type='text' placeholder='כותרת ההצעה' size='20'><textarea name='text' placeholder='הסבר על ההצעה' rows='4' cols='30'></textarea><input type='button' value='אישור' class='pure-button pure-button-primary' onclick='createOption("+questionKeyStr+", this.form)'> <input type='button' class='pure-button button-warning' value='ביטול' onclick='hideEditWizQuestion()'></form></div>";
+        
+        $("#editWizQuestion").html(htmlText).show(500);
+    
+}
+
+// Function that creates new option.....
+
+function createOption(questionKey, form){
+    
+    var title = form.title.value;
+    var text = form.text.value;
+    text = text.replace(/(?:\r\n|\r|\n)/g, '<br />');   
+      
+    var newOption = sessionDB.child("questions/"+questionKey+"/options").push({text:
+                                                               {
+                                                                   mainText:text,
+                                                                   title:title,
+                                                                   color: getRandomColor()
+                                                               }
+                                                              });
+    var newID = newOption.key();
+    console.log("new ID is: "+newID);
+    
+    //create event that do somthing each time the vote changes
+    
+    newOption.child("/votes").on("value",function(votesDB){
+        console.log("value changed on vote, " + newID);
+        
+        //check the number of votesYes-VotesNo
+        
+        //Count no votes
+        newOption.child("/votes/no").once("value", function(noVotes){
+            
+            
+            var noVoteCount = 0;
+            
+            noVotes.forEach(function(noVote){
+                noVoteCount ++;
+                console.log("number of no is: "+noVoteCount); 
+            })
+            
+            console.log("NNNNOOOOOO");
+        })
+        
+    });
+    
+    wizShowOptions(questionKey);
+}
+     
+function deleteWizOption (questionKey, optionKey){
+    
+    if (confirm("האם למחוק?") === false) {
+        return;
+    }
+    
+    sessionDB.child("questions/"+questionKey+"/options/"+optionKey).remove();
+    wizShowOptions(questionKey);
+}
+
+// --------------Edit Box ----------------------------
+function editWizOption (questionKey, optionKey) {
+    
+    var questionKeyStr = JSON.stringify(questionKey);
+    var optionKeyStr = JSON.stringify(optionKey);
+    
+        
+    sessionDB.child("questions/"+questionKey+"/options/"+optionKey).once("value",function(optionData){
+        var titleOption = optionData.val().text.title;
+        var textOption = optionData.val().text.mainText;
+        textOption = textOption.replace(/(?:\r\n|\r|\n)/g, '<br />');
+        
+        if (optionData.val().text.color === undefined){            
+            var color = "brown";
+        } else {
+            var color = optionData.val().text.color;
+        }
+            
+        var colorStr = JSON.stringify(color);
+        
+        var htmlText = "<div class='wizLayout wizLayoutEdit' style='background-color:"+colorStr+">"+                            
+                            "<div class='wizMainWrapText wizMainWrapTextEdit'>"+
+                                "<div dir='rtl' class='wizMainText wizMainTextEdit'>"+
+                                    "<div class='wizMainTextTitle wizMainTextTitleEdit' contenteditable='true' id='"+questionKey+optionKey+"TEdit'>"+
+                                        titleOption+
+                                    "</div>"+
+                                    "<div class='wizMainTextText wizMainTextTextEdit' contenteditable='true' id='"+questionKey+optionKey+"Edit'>"+
+                                        textOption+
+                                    "</div>"+
+                                "</div>"+
+                                " <input type='button' class='pure-button pure-button-primary' value='OK' onclick='updateText("+questionKeyStr+","+optionKeyStr+")'> "+
+                                 "<input type='button' class='pure-button button-error' value='מחיקה'"+
+                                " onclick='deleteWizOption("+questionKeyStr+","+optionKeyStr+")'> "+                                
+                            "</div></div>";
+        
+        $("#editWizQuestion").html(htmlText).show(500);
+        
+    })
+}
+
+function getRandomColor() {
+    var letters = '0123456789ABCDEF'.split('');
+    var color = '#';
+    for (var i = 0; i < 6; i++ ) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+function hideEditWizQuestion () {
+    $("#editWizQuestion").hide(500);
+}
