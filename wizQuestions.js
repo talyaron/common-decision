@@ -35,6 +35,8 @@ function setTypeOfQuestion(type){
 }
 
 var v_KeepFirstList = null;
+var v_stam = "-999";
+//var v_KeepHtml = "-999";
 
 function wizShowOptions(questionKey){
     
@@ -74,7 +76,7 @@ function wizShowOptions(questionKey){
                 $("#" + questionKey + optionKey).text(textData.val().mainText);
                 $("#" + questionKey + optionKey + "T").text(textData.val().title);
             })
-            
+
             //listen to changes in votes
 
             // ------------------
@@ -85,7 +87,7 @@ function wizShowOptions(questionKey){
 
             //DB for no and yes voters
             var votesDB = sessionDB.child("questions/" + questionKey + "/options/" + optionKey + "/votes");
-            
+
 
             // get text and title of option 
             var textOption = optionDB.val().text.mainText;
@@ -108,34 +110,34 @@ function wizShowOptions(questionKey){
                 })
 
             });
-            
+
             // if votes changed in DB, do the following: update text and move divs if necesry
-            
+
             sessionDB.child("questions/" + questionKey + "/options/" + optionKey + "/votes").on("value", function (textData) {
                 console.log("vote changed");
-                
+
                 var noVotesCh = 0;
                 var yesVotesCh = 0;
-                
+
                 votesDB.once("value", function (voters) {
-                voters.forEach(function (vote) {
-                    if (vote.val() === "no") {
-                        noVotesCh++;
-                        console.log("number of nies: " + noVotesCh);
-                    }
+                    voters.forEach(function (vote) {
+                        if (vote.val() === "no") {
+                            noVotesCh++;
+                            console.log("number of nies: " + noVotesCh);
+                        }
 
-                    if (vote.val() === "yes") {
-                        yesVotesCh++;
-                        console.log("number of yeses: " + yesVotesCh);
-                    }
-                })
+                        if (vote.val() === "yes") {
+                            yesVotesCh++;
+                            console.log("number of yeses: " + yesVotesCh);
+                        }
+                    })
 
-            });
-                $("#" + questionKey + optionKey+ "votes").text("בעד: " + yesVotesCh + ", נגד: " + noVotesCh + ", סך הכל: " + (yesVotesCh - noVotesCh));
-                
-                
+                });
+                $("#" + questionKey + optionKey + "votes").text("בעד: " + yesVotesCh + ", נגד: " + noVotesCh + ", סך הכל: " + (yesVotesCh - noVotesCh));
+
+
             })
-           
+
             var optionKeyStr = JSON.stringify(optionKey);
 
             var yesStr = JSON.stringify("yes");
@@ -177,14 +179,14 @@ function wizShowOptions(questionKey){
                                     "</div>" +
                                 "</div>" +
                                 " <input type='button' class='pure-button pure-button-primary' value='עריכה' onclick='editWizOption(" + questionKeyStr + "," + optionKeyStr + ")'> " +
-                                " <span style='color: white' id='"+questionKey + optionKey+"votes'>בעד:" + yesVotes + ", נגד: " + noVotes + "</span>" +
+                                " <span style='color: white' id='" + questionKey + optionKey + "votes'>בעד:" + yesVotes + ", נגד: " + noVotes + "</span>" +
                             "</div></div>";
 
             optionsHtml.push([(yesVotes - noVotes), optionHtmlCurrent, l_id, -1]); //change to json object
             console.log("InWhile :   Yes=" + yesVotes + "  No=" + noVotes + " id=" + l_id);
 
             var score = (noVotes - yesVotes)
-            
+
         })
         for (i in optionsHtml) {
             console.log("BeforeSort: " + i + ":" + optionsHtml[i][0] + " id=" + optionsHtml[i][2] + " index=" + optionsHtml[i][3]);
@@ -192,7 +194,7 @@ function wizShowOptions(questionKey){
 
 
         //sort by votes
-        
+
         optionsHtml.sort(function (a, b) { return b[0] - a[0] });
         for (i in optionsHtml) {
             optionsHtml[i][3] = i; // set index after sorting
@@ -218,7 +220,7 @@ function wizShowOptions(questionKey){
             htmlwizQuestion += optionsHtml[i][1];
         }
 
-        
+
         //if first time entrence do....
 
         if (v_KeepFirstList == null) {
@@ -227,7 +229,7 @@ function wizShowOptions(questionKey){
             $("#wizQuestion").html(htmlwizQuestion);
             $("#editWizQuestion").hide();
             v_KeepFirstList = optionsHtml;
-       //     v_KeepHtml = htmlwizQuestion;
+            //     v_KeepHtml = htmlwizQuestion;
             console.log("===========null and return ===============");
 
             return;
@@ -236,13 +238,25 @@ function wizShowOptions(questionKey){
 
         console.log("=========== Move The DIVs ===============");
 
+        moveOptions(optionsHtml);
+        
+        //      v_KeepFirstList = optionsHtml;
+        //        v_KeepHtml = htmlwizQuestion;
 
+    })
+}
+
+
+
+function moveOptions(optionsHtml)
+{
         // 2nd time and hence forth
         for (i in optionsHtml) {
             console.log("2nd stage " + i + ":" + optionsHtml[i][0] + " id= " + optionsHtml[i][2] + " index=" + optionsHtml[i][3]);
-            var l_id = optionsHtml[i][2]; 
+            var l_id = optionsHtml[i][2];
+            v_stam = l_id;
 
-            var l_item = v_KeepFirstList.find(functional, { xi_id: l_id });
+            var l_item = v_KeepFirstList.find(functional, {xi_id:l_id});
 
             // TBD not exists
             if (l_item == null) {
@@ -250,40 +264,22 @@ function wizShowOptions(questionKey){
             }
 
             var j = l_item[3];
-            var l = $("#"+l_id).height() + 10;// the 10 shoud be from the css
+            var l = $("#" + l_id).height() + 10; // the 10 shoud be from the css
 
             var l_delta = (i - j) * l;
             console.log(i + "item found=  j ==> i   " + j + " ==>" + i + "  i-j=" + (i - j));
-       //     if (del != 0) {
-
-                
-                move("#"+l_id).
+            move("#" + l_id).
                 y(l_delta).
                 duration('2s')
                 .end();
-/*
-                var l_new_y = i * l;
-                move(l_id2).
-                set('margin-top', l_new_y).
-                duration('2s')
-            .end();
-            */
+            }// for
 
-
-      //      }
-
-        }
-
- //      v_KeepFirstList = optionsHtml;
-//        v_KeepHtml = htmlwizQuestion;
-
-    })
 }
-
 //????????????????????????????????????????????
 
 function functional(element, index, array) {
-    var l_bool = element[2] == this.xi_id;
+    var x = this.xi_id;
+    var l_bool = element[2] == v_stam;
     return l_bool;
 }
 
